@@ -1,0 +1,9 @@
+{
+  "name": "stormwatch-alerts",
+  "version": "1.0.0",
+  "description": "StormWatch SMS alert backend",
+  "private": true,
+  "engines": {
+    "node": "18.x"
+  }
+}
