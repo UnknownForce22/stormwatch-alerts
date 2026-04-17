@@ -1975,19 +1975,21 @@ function drawSoundingChart(levels) {
 async function fetchMDs(lt, ln) {
   var el = document.getElementById('mdList');
   try {
-    // Try point-based query first (active MDs covering this location)
-    var url = 'https://mesonet.agron.iastate.edu/json/spcmcd.json?lon=' + ln.toFixed(4) + '&lat=' + lt.toFixed(4);
+    // Correct IEM endpoint: spcmcd.py with lat/lon params
+    var url = 'https://mesonet.agron.iastate.edu/json/spcmcd.py?lat=' + lt.toFixed(4) + '&lon=' + ln.toFixed(4);
     var r = await fetch(url);
     if (!r.ok) throw new Error('IEM HTTP ' + r.status);
     var d = await r.json();
-    // If no results for this point, fall back to recent national MDs
-    if ((!d.mcds || !d.mcds.length) && (!d.data || !d.data.length)) {
-      var r2 = await fetch('https://mesonet.agron.iastate.edu/json/spcmcd.json');
+    // If no MDs for this specific point, get all recent national MDs
+    var mds = d.mcds || d.data || [];
+    if (!mds.length) {
+      var r2 = await fetch('https://mesonet.agron.iastate.edu/json/spcmcd.py');
       if (r2.ok) d = await r2.json();
     }
     renderMDs(d, lt, ln);
+    dbgLog('SPC MDs: OK (' + (d.mcds||d.data||[]).length + ' found)', true);
   } catch(e) {
-    if (el) el.innerHTML = '<div style="font-family:\'Share Tech Mono\',monospace;font-size:.65rem;color:var(--green);padding:12px;">&#10003; NO ACTIVE MESOSCALE DISCUSSIONS &mdash; <span style="color:var(--muted)">Check <a href="https://spc.noaa.gov" target="_blank" style="color:var(--accent)">spc.noaa.gov</a> for full outlook</span></div>';
+    if (el) el.innerHTML = '<div style="font-family:\'Share Tech Mono\',monospace;font-size:.65rem;color:var(--green);padding:12px;">&#10003; NO ACTIVE MESOSCALE DISCUSSIONS &mdash; <span style="color:var(--muted)">Check <a href="https://www.spc.noaa.gov/products/md/" target="_blank" style="color:var(--accent)">spc.noaa.gov</a></span></div>';
     dbgLog('SPC MDs: ' + e.message, false);
   }
 }
@@ -2001,14 +2003,18 @@ function renderMDs(data, lt, ln) {
     return;
   }
   el.innerHTML = mds.slice(0,5).map(function(md) {
-    var num = md.num || md.number || md.mcdnum || (md.product_id ? md.product_id.replace(/\D/g,'').slice(-4) : '???');
+    // Extract MD number from product_id e.g. "202604161522-KWNS-ACUS11-SWOMCD" -> look for num field
+    // IEM spcmcd.py returns: num, year, utc_issue, utc_expire, watch_prob1, concerning, product_id
+    var num = md.num || md.number || md.mcdnum || '???';
     var year = md.year || new Date().getFullYear();
+    // Build correct SPC URL - num should be zero-padded 4 digits
+    var numPadded = String(num).padStart(4, '0');
     var concerning = (md.concerning || md.concern || md.product || '').toUpperCase();
     var text = md.text || md.narrative || '';
     var issued = md.utc_issue || '';
     var watchProb = md.watch_prob1 || md.watch_prob || 0;
     var hasWatch = watchProb > 0;
-    var spcUrl = 'https://www.spc.noaa.gov/products/md/' + year + '/md' + String(num).padStart(4,'0') + '.html';
+    var spcUrl = 'https://www.spc.noaa.gov/products/md/' + year + '/md' + numPadded + '.html';
     var issuedFmt = issued ? new Date(issued).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '--';
     return '<div style="padding:13px;background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--warn);margin-bottom:8px;">'
       + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap;">'
