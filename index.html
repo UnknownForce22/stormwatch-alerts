@@ -483,9 +483,15 @@ footer{text-align:center;padding:22px 0;font-family:'Share Tech Mono',monospace;
     <div id="locList" style="display:flex;flex-direction:column;gap:8px;min-height:60px;">
       <div style="font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--muted);padding:8px">No saved locations yet.</div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-      <input id="locAddInp" class="city-inp" placeholder="Add city, state..." style="flex:1;min-width:160px;padding:7px 12px;">
-      <button class="btn" onclick="addLocation()" style="padding:7px 14px;font-size:.75rem;">+ ADD</button>
+    <div style="margin-top:12px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">ADDRESS OR CITY</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input id="locAddInp" class="city-inp" placeholder="123 Main St, Bethany OK  or  Bethany, OK" style="flex:1;min-width:200px;padding:7px 12px;">
+        <button class="btn" onclick="addLocation()" style="padding:7px 14px;font-size:.75rem;">+ ADD</button>
+      </div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--muted);margin-top:5px;">
+        Accepts full address, city/state, or ZIP code
+      </div>
     </div>
     <div style="margin-top:10px;font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--muted);line-height:2;">
       POLL INTERVAL: <span style="color:var(--accent)">15 MIN</span> &bull;
@@ -1437,22 +1443,65 @@ async function addLocation() {
   var inp = document.getElementById('locAddInp');
   var val = (inp ? inp.value : '').trim();
   if (!val) return;
-  // Geocode it first
-  try {
-    var r = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(val) + '&count=1&language=en&format=json');
-    var d = await r.json();
-    if (!d.results || !d.results.length) { alert('City not found.'); return; }
-    var g = d.results[0];
-    var name = g.name + (g.admin1 ? ', ' + g.admin1 : '');
-    // Check not already saved
-    if (savedLocations.some(function(l){ return l.name === name; })) { alert('Already saved.'); return; }
-    savedLocations.push({ name: name, lat: g.latitude, lon: g.longitude, hasAlert: false, lastAlert: null });
-    saveLocs();
-    renderLocList();
-    if (inp) inp.value = '';
-    // Kick off an immediate poll
-    pollAllLocations();
-  } catch(e) { alert('Geocode failed: ' + e.message); }
+
+  // Check if input looks like a street address (contains digits at start)
+  var isAddress = /^\d+\s/.test(val);
+
+  var lat, lon, displayName;
+
+  if (isAddress) {
+    // Use Census Bureau geocoder for precise US address lookup (free, no key)
+    try {
+      var censusUrl = 'https://geocoding.geo.census.gov/geocoder/locations/onelineaddress'
+        + '?address=' + encodeURIComponent(val)
+        + '&benchmark=Public_AR_Current&format=json';
+      var r = await fetch(censusUrl);
+      var d = await r.json();
+      var matches = d.result && d.result.addressMatches;
+      if (matches && matches.length > 0) {
+        var match = matches[0];
+        lat = match.coordinates.y;
+        lon = match.coordinates.x;
+        displayName = match.matchedAddress;
+        // Shorten the matched address for display
+        var parts = displayName.split(',');
+        displayName = parts.slice(0, 3).join(',').trim();
+      } else {
+        // Fallback to Open-Meteo if Census doesn't find it
+        throw new Error('No Census match');
+      }
+    } catch(e) {
+      // Fallback: use Open-Meteo
+      var r2 = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(val) + '&count=1&language=en&format=json');
+      var d2 = await r2.json();
+      if (!d2.results || !d2.results.length) { alert('Address not found. Try adding city and state.'); return; }
+      lat = d2.results[0].latitude;
+      lon = d2.results[0].longitude;
+      displayName = d2.results[0].name + (d2.results[0].admin1 ? ', ' + d2.results[0].admin1 : '');
+    }
+  } else {
+    // City/state/ZIP - use Open-Meteo geocoding
+    try {
+      var r3 = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(val) + '&count=1&language=en&format=json');
+      var d3 = await r3.json();
+      if (!d3.results || !d3.results.length) { alert('Location not found.'); return; }
+      lat = d3.results[0].latitude;
+      lon = d3.results[0].longitude;
+      displayName = d3.results[0].name + (d3.results[0].admin1 ? ', ' + d3.results[0].admin1 : '');
+    } catch(e) { alert('Geocode failed: ' + e.message); return; }
+  }
+
+  // Check not already saved
+  if (savedLocations.some(function(l){ return Math.abs(l.lat-lat)<0.01 && Math.abs(l.lon-lon)<0.01; })) {
+    alert('That location is already saved.');
+    return;
+  }
+
+  savedLocations.push({ name: displayName, lat: lat, lon: lon, hasAlert: false, lastAlert: null });
+  saveLocs();
+  renderLocList();
+  if (inp) inp.value = '';
+  pollAllLocations();
 }
 
 function removeLocation(i) {
