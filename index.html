@@ -2,8 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>STORMWATCH</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StormWatch">
+<meta name="theme-color" content="#060a0f">
+<link rel="apple-touch-icon" href="icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="apple-touch-startup-image" href="icon-512.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -15,7 +26,7 @@
   --purple:#b44fff;--text:#cde4f5;--muted:#4a6a88;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;min-height:100vh;}
+body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;min-height:100vh;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
 body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 50% -5%,rgba(0,70,140,.28),transparent 60%);pointer-events:none;z-index:0;}
 .wrap{max-width:1360px;margin:0 auto;padding:0 14px;position:relative;z-index:2;}
 
@@ -1444,51 +1455,38 @@ async function addLocation() {
   var val = (inp ? inp.value : '').trim();
   if (!val) return;
 
-  // Check if input looks like a street address (contains digits at start)
-  var isAddress = /^\d+\s/.test(val);
-
   var lat, lon, displayName;
 
-  if (isAddress) {
-    // Use Census Bureau geocoder for precise US address lookup (free, no key)
+  // Use Nominatim (OpenStreetMap) - supports CORS, handles full addresses, city names, ZIPs
+  try {
+    var nomUrl = 'https://nominatim.openstreetmap.org/search'
+      + '?q=' + encodeURIComponent(val)
+      + '&format=json&limit=1&addressdetails=1&countrycodes=us';
+    var r = await fetch(nomUrl, { headers: { 'Accept-Language': 'en', 'User-Agent': 'StormWatch/1.0' } });
+    if (!r.ok) throw new Error('Nominatim HTTP ' + r.status);
+    var d = await r.json();
+    if (!d || !d.length) throw new Error('No results');
+    var result = d[0];
+    lat = parseFloat(result.lat);
+    lon = parseFloat(result.lon);
+    // Build a clean display name from address components
+    var addr = result.address || {};
+    var parts = [];
+    if (addr.house_number && addr.road) parts.push(addr.house_number + ' ' + addr.road);
+    else if (addr.road) parts.push(addr.road);
+    if (addr.city || addr.town || addr.village || addr.suburb) parts.push(addr.city || addr.town || addr.village || addr.suburb);
+    if (addr.state) parts.push(addr.state);
+    displayName = parts.length ? parts.join(', ') : result.display_name.split(',').slice(0,3).join(',').trim();
+  } catch(e) {
+    // Fallback to Open-Meteo for city names
     try {
-      var censusUrl = 'https://geocoding.geo.census.gov/geocoder/locations/onelineaddress'
-        + '?address=' + encodeURIComponent(val)
-        + '&benchmark=Public_AR_Current&format=json';
-      var r = await fetch(censusUrl);
-      var d = await r.json();
-      var matches = d.result && d.result.addressMatches;
-      if (matches && matches.length > 0) {
-        var match = matches[0];
-        lat = match.coordinates.y;
-        lon = match.coordinates.x;
-        displayName = match.matchedAddress;
-        // Shorten the matched address for display
-        var parts = displayName.split(',');
-        displayName = parts.slice(0, 3).join(',').trim();
-      } else {
-        // Fallback to Open-Meteo if Census doesn't find it
-        throw new Error('No Census match');
-      }
-    } catch(e) {
-      // Fallback: use Open-Meteo
       var r2 = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(val) + '&count=1&language=en&format=json');
       var d2 = await r2.json();
-      if (!d2.results || !d2.results.length) { alert('Address not found. Try adding city and state.'); return; }
+      if (!d2.results || !d2.results.length) { alert('Location not found. Try: "123 Main St, Bethany OK" or "Bethany, OK"'); return; }
       lat = d2.results[0].latitude;
       lon = d2.results[0].longitude;
       displayName = d2.results[0].name + (d2.results[0].admin1 ? ', ' + d2.results[0].admin1 : '');
-    }
-  } else {
-    // City/state/ZIP - use Open-Meteo geocoding
-    try {
-      var r3 = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(val) + '&count=1&language=en&format=json');
-      var d3 = await r3.json();
-      if (!d3.results || !d3.results.length) { alert('Location not found.'); return; }
-      lat = d3.results[0].latitude;
-      lon = d3.results[0].longitude;
-      displayName = d3.results[0].name + (d3.results[0].admin1 ? ', ' + d3.results[0].admin1 : '');
-    } catch(e) { alert('Geocode failed: ' + e.message); return; }
+    } catch(e2) { alert('Could not geocode: ' + e.message); return; }
   }
 
   // Check not already saved
@@ -2184,6 +2182,15 @@ function renderStormReports(data, lt, ln) {
     scheduleNext();
   }, 1500);
 })();
+
+// ── SERVICE WORKER REGISTRATION ──────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(function(reg){ console.log('SW registered:', reg.scope); })
+      .catch(function(e){ console.log('SW failed:', e); });
+  });
+}
 </script>
 </body>
 </html>
