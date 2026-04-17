@@ -607,14 +607,14 @@ footer{text-align:center;padding:22px 0;font-family:'Share Tech Mono',monospace;
 
 var gLat=35.4676, gLon=-97.5164, gCity='Oklahoma City, OK';
 
-// ── ALERT API ─────────────────────────────────────────────────
+// -- ALERT API -------------------------------------------------
 // Set this to your Vercel deployment URL after deploying stormwatch-alerts
 var ALERT_API = 'https://stormwatch-alerts.vercel.app';
 var radarMap, radarLayer, radarData, radarFrames=[], radarIdx=0;
 var playTimer=null, radarMode='radar', radarOp=0.7;
 var activeAlerts=[];
 
-// ── LOADER ───────────────────────────────────────────────────
+// -- LOADER ---------------------------------------------------
 function setLoad(p,m){
   var f=document.getElementById('lbf'), msg=document.getElementById('lmsg');
   if(f) f.style.width=p+'%';
@@ -635,7 +635,7 @@ function dbgLog(msg, ok){
   el.innerHTML += '<div style="color:'+(ok?'#00ff88':'#ff6680')+'">'+msg+'</div>';
 }
 
-// ── BOOT ─────────────────────────────────────────────────────
+// -- BOOT -----------------------------------------------------
 // ESC closes radar fullscreen
 document.addEventListener('keydown', function(e){
   if(e.key==='Escape'){
@@ -703,7 +703,7 @@ async function boot(lt, ln, ct){
   setTimeout(reveal, 300);
 }
 
-// ── SEARCH / GPS ─────────────────────────────────────────────
+// -- SEARCH / GPS ---------------------------------------------
 async function doSearch(){
   var v=document.getElementById('cityInp').value.trim();
   if(!v) return;
@@ -747,7 +747,7 @@ function showLoading(){
   setLoad(0,'LOADING...');
 }
 
-// ── HELPERS ──────────────────────────────────────────────────
+// -- HELPERS --------------------------------------------------
 function wmoDesc(c){
   var m={0:'Clear',1:'Mostly Clear',2:'Partly Cloudy',3:'Overcast',
     45:'Fog',48:'Dense Fog',51:'Light Drizzle',53:'Drizzle',55:'Heavy Drizzle',
@@ -778,7 +778,7 @@ function setBar(id,val,max){
   },400);
 }
 
-// ── SPC OFFICIAL TORNADO PROBABILITY ─────────────────────────
+// -- SPC OFFICIAL TORNADO PROBABILITY -------------------------
 // Uses NOAA MapServer - real official probabilistic tornado outlook polygons
 // Layer 2 = Day 1 Probabilistic Tornado, dn field = actual % (2,5,10,15,30,45,60)
 // Layer 5 = Day 1 Significant Tornado (EF2+, hatched)
@@ -844,7 +844,7 @@ async function fetchSPCOutlook(lt, ln) {
   spcDataLoaded = true;
 }
 
-// ── OPEN-METEO ───────────────────────────────────────────────
+// -- OPEN-METEO -----------------------------------------------
 async function fetchWeather(lt,ln){
   var url='https://api.open-meteo.com/v1/forecast'
     +'?latitude='+lt.toFixed(4)+'&longitude='+ln.toFixed(4)
@@ -986,7 +986,7 @@ function renderConvective(cape,cin,li,precip,lt,ln){
   stpEl.style.color=stp>3?'var(--danger)':stp>1?'var(--warn)':'var(--text)';
 }
 
-// ── NWS OFFICIAL FORECAST TEXT ────────────────────────────────
+// -- NWS OFFICIAL FORECAST TEXT --------------------------------
 async function fetchNWSForecast(lt,ln){
   // Step 1: get grid info
   var ptR=await fetch('https://api.weather.gov/points/'+lt.toFixed(4)+','+ln.toFixed(4));
@@ -1059,7 +1059,7 @@ function renderForecastFallback(){
   if(grid) grid.innerHTML='<div style="font-family:\'Share Tech Mono\',monospace;font-size:.65rem;color:var(--muted);padding:16px">NWS FORECAST UNAVAILABLE FOR THIS LOCATION<br><span style="color:var(--accent)">api.weather.gov</span> only covers the USA.</div>';
 }
 
-// ── UPDATE TORNADO GAUGE WITH OFFICIAL SPC DATA ──────────────
+// -- UPDATE TORNADO GAUGE WITH OFFICIAL SPC DATA --------------
 function updateTornadoFromSPC() {
   if (!spcDataLoaded || spcTornadoPct === null) return;
   var p = spcTornadoPct;
@@ -1120,7 +1120,7 @@ function updateTornadoFromSPC() {
   }
 }
 
-// ── 7-DAY STRIP ──────────────────────────────────────────────
+// -- 7-DAY STRIP ----------------------------------------------
 function renderForecast7day(d){
   if(!d||!d.time) return;
   var strip=document.getElementById('fstrip'); strip.innerHTML='';
@@ -1155,7 +1155,7 @@ function renderForecast7day(d){
   }
 }
 
-// ── WIND + SPC + PRECIP ──────────────────────────────────────
+// -- WIND + SPC + PRECIP --------------------------------------
 function renderWind(c,cape,cin){
   var ws=Math.round(c.wind_speed_10m), wg=Math.round(c.wind_gusts_10m), deg=c.wind_direction_10m||0;
   document.getElementById('wSurf').textContent=ws+' MPH '+wDir(deg);
@@ -1220,7 +1220,7 @@ function renderPrecip7day(d){
   document.getElementById('pPat').textContent=total>2?'WET PATTERN':total>0.5?'NEAR NORMAL':'DRY TREND';
 }
 
-// ── NWS STATION OBSERVATIONS ──────────────────────────────────
+// -- NWS STATION OBSERVATIONS ----------------------------------
 async function fetchStations(lt,ln){
   var obsUrl=window._obsUrl;
   if(!obsUrl){
@@ -1271,7 +1271,7 @@ async function fetchStations(lt,ln){
   if(count===0) throw new Error('No valid observations returned');
 }
 
-// ── NWS ALERTS ───────────────────────────────────────────────
+// -- NWS ALERTS -----------------------------------------------
 async function fetchAlerts(lt,ln){
   var r=await fetch('https://api.weather.gov/alerts/active?point='+lt.toFixed(4)+','+ln.toFixed(4));
   var ws=document.getElementById('watchStatus');
@@ -1295,7 +1295,7 @@ function showAlerts(){
   alert('['+a.event+']\n\n'+(a.headline||'')+'\n\n'+(a.description||'').substring(0,600)+'...');
 }
 
-// ── RAINVIEWER RADAR ─────────────────────────────────────────
+// -- RAINVIEWER RADAR -----------------------------------------
 function initRadar(){
   radarMap=L.map('radarMap',{center:[gLat,gLon],zoom:7,zoomControl:true,attributionControl:false});
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,className:'dark-tiles'}).addTo(radarMap);
@@ -1469,8 +1469,8 @@ function loadLocation(i) {
   boot(loc.lat, loc.lon, loc.name);
 }
 
-// ── TWILIO ──────────────────────────────────────────────────────
-// ── PHONE / SMS (routes through your Vercel backend) ──────────
+// -- TWILIO ------------------------------------------------------
+// -- PHONE / SMS (routes through your Vercel backend) ----------
 function savePhone() {
   var inp = document.getElementById('userPhone');
   if (!inp) return;
@@ -1536,7 +1536,7 @@ async function sendSMS(toNumber, body, type) {
   return data;
 }
 
-// ── ALERT POLLING ───────────────────────────────────────────────
+// -- ALERT POLLING -----------------------------------------------
 var ALERT_TYPES = ['Tornado Warning','Severe Thunderstorm Warning','Flash Flood Warning',
   'Tornado Watch','Severe Thunderstorm Watch','Hurricane Warning','Hurricane Watch',
   'Extreme Wind Warning','Flash Flood Emergency'];
@@ -1584,16 +1584,16 @@ function startPolling() {
 // ================================================================
 async function fetchModelComparison(lt, ln) {
   var models = [
-    { id: 'gfs', name: 'GFS', desc: '7-day global', col: '#00d4ff' },
+    { id: 'gfs_seamless', name: 'GFS', desc: '7-day global', col: '#00d4ff' },
     { id: 'best_match', name: 'NAM', desc: '60-hr regional', col: '#ffd700' },
     { id: 'icon_seamless', name: 'ICON', desc: 'European alt', col: '#b44fff' }
   ];
 
   var results = await Promise.allSettled(models.map(function(m) {
     var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lt.toFixed(4) + '&longitude=' + ln.toFixed(4)
-      + '&models=' + m.id
       + '&hourly=temperature_2m,precipitation,cape,wind_speed_10m'
       + '&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
+      + '&models=' + m.id
       + '&timezone=auto&forecast_days=2';
     return fetch(url).then(function(r){ return r.json(); });
   }));
@@ -1653,15 +1653,17 @@ function modelStat(label, val) {
 async function drawHRRRChart(lt, ln) {
   try {
     var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lt.toFixed(4) + '&longitude=' + ln.toFixed(4)
-      + '&models=icon_seamless&hourly=cape,precipitation_probability'
-      + '&timezone=auto&forecast_days=1';
+      + '&hourly=cape,precipitation_probability'
+      + '&models=gfs_seamless&timezone=auto&forecast_days=1';
     var r = await fetch(url);
     var d = await r.json();
     if (!d || !d.hourly || !d.hourly.cape) return;
 
     var cv2 = document.getElementById('hrrrChart');
     if (!cv2) return;
-    var cw = cv2.offsetWidth, ch = 80;
+    var rect = cv2.parentElement ? cv2.parentElement.getBoundingClientRect() : null;
+    var cw = Math.round(rect ? rect.width : cv2.offsetWidth || 400) - 2;
+    var ch = 80;
     cv2.width = cw; cv2.height = ch;
     var c2 = cv2.getContext('2d');
 
@@ -1738,14 +1740,14 @@ async function fetchSoundings(lt, ln) {
   // Find nearest upper-air station by lat/lon
   // Iowa State serves sounding data as JSON - get nearest 12Z or 00Z launch
   var stations = [
-    { id:'OUN', name:'Norman OK',   lat:35.18, lon:-97.44 },
-    { id:'LMN', name:'Lamont OK',   lat:36.69, lon:-97.49 },
-    { id:'DDC', name:'Dodge City',  lat:37.76, lon:-99.97 },
-    { id:'AMA', name:'Amarillo TX', lat:35.23, lon:-101.7 },
-    { id:'FWD', name:'Fort Worth',  lat:32.83, lon:-97.30 },
-    { id:'SHV', name:'Shreveport',  lat:32.45, lon:-93.84 },
-    { id:'TOP', name:'Topeka KS',   lat:39.07, lon:-95.62 },
-    { id:'SGF', name:'Springfield', lat:37.23, lon:-93.40 },
+    { id:'KOUN', name:'Norman OK',   lat:35.18, lon:-97.44 },
+    { id:'KLMN', name:'Lamont OK',   lat:36.69, lon:-97.49 },
+    { id:'KDDC', name:'Dodge City',  lat:37.76, lon:-99.97 },
+    { id:'KAMA', name:'Amarillo TX', lat:35.23, lon:-101.7 },
+    { id:'KFWD', name:'Fort Worth',  lat:32.83, lon:-97.30 },
+    { id:'KSHV', name:'Shreveport',  lat:32.45, lon:-93.84 },
+    { id:'KTOP', name:'Topeka KS',   lat:39.07, lon:-95.62 },
+    { id:'KSGF', name:'Springfield', lat:37.23, lon:-93.40 },
   ];
 
   // Pick nearest station
@@ -1755,7 +1757,17 @@ async function fetchSoundings(lt, ln) {
   }, { stn:stations[0], d:999 }).stn;
 
   // Use Iowa State JSON API
-  var url = 'https://mesonet.agron.iastate.edu/json/raob.py?station=' + nearest.id + '&fmt=json&ts=&hours=12';
+  // Find the most recent 00Z or 12Z launch time (soundings only launch twice daily)
+    var now = new Date();
+    var utcH = now.getUTCHours();
+    // Pick nearest past launch: 00Z or 12Z
+    var launchH = utcH >= 12 ? 12 : 0;
+    // If we're within 2 hours of a launch, go back to previous one
+    if (utcH - launchH < 2) launchH = launchH === 12 ? 0 : 12;
+    var launchDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), launchH, 0, 0));
+    if (launchH > utcH) launchDate.setUTCDate(launchDate.getUTCDate() - 1); // previous day
+    var ts = launchDate.toISOString().slice(0,16) + ':00Z';
+    var url = 'https://mesonet.agron.iastate.edu/json/raob.py?station=' + nearest.id + '&fmt=json&ts=' + encodeURIComponent(ts);
   try {
     var r = await fetch(url);
     if (!r.ok) throw new Error('RAOB HTTP ' + r.status);
@@ -1768,14 +1780,17 @@ async function fetchSoundings(lt, ln) {
 }
 
 function renderSoundings(data, station) {
-  var profiles = data.profiles || data.data || [];
+  // IEM API v1 raob returns {data: [{station, valid, profile: [...levels], sbcape, sbcin, etc}]}
+  var profiles = data.data || data.profiles || [];
   if (!profiles.length) {
     document.getElementById('soundingMeta').textContent = 'NO RECENT SOUNDING DATA FOR ' + station.id;
+    // Try to render empty state cleanly
+    var sp = document.getElementById('soundingParams');
+    if(sp) sp.innerHTML = '<div style="font-family:\'Share Tech Mono\',monospace;font-size:.65rem;color:var(--muted);grid-column:span 2;padding:10px;">No recent sounding launch available for ' + station.id + '</div>';
     return;
   }
-
   var profile = profiles[0];
-  var levels = profile.profile || [];
+  var levels = profile.profile || profile.levels || [];
   var meta = profile;
 
   // Extract key params
@@ -1911,52 +1926,52 @@ function drawSoundingChart(levels) {
 //  SPC MESOSCALE DISCUSSIONS
 // ================================================================
 async function fetchMDs(lt, ln) {
-  // Iowa State serves SPC MDs as JSON - search by point
+  var el = document.getElementById('mdList');
   try {
+    // Try point-based query first (active MDs covering this location)
     var url = 'https://mesonet.agron.iastate.edu/json/spcmcd.json?lon=' + ln.toFixed(4) + '&lat=' + lt.toFixed(4);
     var r = await fetch(url);
-    if (!r.ok) throw new Error('MD HTTP ' + r.status);
+    if (!r.ok) throw new Error('IEM HTTP ' + r.status);
     var d = await r.json();
-    renderMDs(d);
-  } catch(e) {
-    // Fallback: try to get all recent MDs
-    try {
+    // If no results for this point, fall back to recent national MDs
+    if ((!d.mcds || !d.mcds.length) && (!d.data || !d.data.length)) {
       var r2 = await fetch('https://mesonet.agron.iastate.edu/json/spcmcd.json');
-      var d2 = await r2.json();
-      renderMDs(d2, lt, ln);
-    } catch(e2) {
-      document.getElementById('mdList').innerHTML = '<div style="font-family:\'Share Tech Mono\',monospace;font-size:.65rem;color:var(--muted);padding:12px;">MESOSCALE DISCUSSIONS: ' + e.message + '</div>';
+      if (r2.ok) d = await r2.json();
     }
+    renderMDs(d, lt, ln);
+  } catch(e) {
+    if (el) el.innerHTML = '<div style="font-family:\'Share Tech Mono\',monospace;font-size:.65rem;color:var(--green);padding:12px;">&#10003; NO ACTIVE MESOSCALE DISCUSSIONS &mdash; <span style="color:var(--muted)">Check <a href="https://spc.noaa.gov" target="_blank" style="color:var(--accent)">spc.noaa.gov</a> for full outlook</span></div>';
+    dbgLog('SPC MDs: ' + e.message, false);
   }
 }
 
 function renderMDs(data, lt, ln) {
   var el = document.getElementById('mdList');
   if (!el) return;
-  var mds = data.mcds || data.discussions || data.data || [];
-
+  var mds = data.data || data.mcds || data.discussions || [];
   if (!mds.length) {
-    el.innerHTML = '<div style="font-family:\'Share Tech Mono\',monospace;font-size:.65rem;color:var(--green);padding:12px;">\u2713 NO ACTIVE MESOSCALE DISCUSSIONS FOR THIS AREA</div>';
+    el.innerHTML = '<div style="font-family:\'Share Tech Mono\',monospace;font-size:.65rem;color:var(--green);padding:12px;">&#10003; NO ACTIVE MESOSCALE DISCUSSIONS FOR THIS AREA</div>';
     return;
   }
-
   el.innerHTML = mds.slice(0,5).map(function(md) {
-    var num = md.num || md.number || '???';
-    var concerning = (md.concern || md.product_id || '').toUpperCase();
+    var num = md.num || md.number || md.mcdnum || (md.product_id ? md.product_id.replace(/\D/g,'').slice(-4) : '???');
+    var year = md.year || new Date().getFullYear();
+    var concerning = (md.concerning || md.concern || md.product || '').toUpperCase();
     var text = md.text || md.narrative || '';
-    var issued = md.utc_issue || md.issue || '';
-    var expires = md.utc_expire || md.expire || '';
-    var hasWatch = (md.watch_prob || 0) > 0;
-    var watchProb = md.watch_prob || 0;
-
+    var issued = md.utc_issue || '';
+    var watchProb = md.watch_prob1 || md.watch_prob || 0;
+    var hasWatch = watchProb > 0;
+    var spcUrl = 'https://www.spc.noaa.gov/products/md/' + year + '/md' + String(num).padStart(4,'0') + '.html';
+    var issuedFmt = issued ? new Date(issued).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '--';
     return '<div style="padding:13px;background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--warn);margin-bottom:8px;">'
       + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap;">'
         + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:1rem;font-weight:700;letter-spacing:2px;color:var(--warn)">MD #' + num + '</span>'
         + (hasWatch ? '<span style="font-family:\'Share Tech Mono\',monospace;font-size:.6rem;color:var(--danger);border:1px solid var(--danger);padding:2px 6px;">WATCH LIKELY ' + watchProb + '%</span>' : '')
-        + '<span style="font-family:\'Share Tech Mono\',monospace;font-size:.58rem;color:var(--muted);margin-left:auto;">ISSUED: ' + (issued||'--') + '</span>'
+        + '<span style="font-family:\'Share Tech Mono\',monospace;font-size:.58rem;color:var(--muted);margin-left:auto;">' + issuedFmt + '</span>'
       + '</div>'
-      + (concerning ? '<div style="font-family:\'Share Tech Mono\',monospace;font-size:.6rem;color:var(--text);margin-bottom:6px;">' + concerning + '</div>' : '')
-      + '<div style="font-size:.78rem;color:var(--muted);line-height:1.65;font-weight:300;">' + text.substring(0,400) + (text.length>400?'...':'') + '</div>'
+      + (concerning ? '<div style="font-family:\'Share Tech Mono\',monospace;font-size:.6rem;color:var(--accent);margin-bottom:8px;letter-spacing:1px;">CONCERNING: ' + concerning + '</div>' : '')
+      + (text ? '<div style="font-size:.78rem;color:var(--muted);line-height:1.65;font-weight:300;margin-bottom:8px;">' + text.substring(0,500) + (text.length>500?'...':'') + '</div>' : '')
+      + '<a href="' + spcUrl + '" style="font-family:\'Share Tech Mono\',monospace;font-size:.58rem;color:var(--accent);text-decoration:none;" target="_blank">VIEW FULL MD ON SPC &#8599;</a>'
       + '</div>';
   }).join('');
 }
@@ -2023,7 +2038,7 @@ function renderStormReports(data, lt, ln) {
 }
 
 
-// ── STORMWATCH ANIMATED BANNER ─────────────────────────────
+// -- STORMWATCH ANIMATED BANNER -----------------------------
 (function(){
   // Random lightning strike system
   var bolts = ['lt1','lt2','lt3','lt4'];
